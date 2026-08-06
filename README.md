@@ -1,7 +1,7 @@
 # 📄 PDF Question Answering App (RAG) — Epochs '26, Day 11
 
 **Participant Name:** Emil
-**MUID:** *(fill in your MUID)*
+**MUID:** emiltomjoseph@mulearn
 
 ## Project Overview
 A Retrieval-Augmented Generation (RAG) application that lets a user upload a
