@@ -8,9 +8,8 @@ Conversation memory lets you ask natural follow-up questions.
 Stack:
     - LangChain            (orchestration)
     - PyPDFLoader           (PDF loading)
-    - Sentence Transformers (embeddings, local & free)
+    - Google Gemini API     (embeddings + LLM, free tier)
     - ChromaDB              (vector store)
-    - Google Gemini API     (free tier LLM inference)
     - Gradio                (UI)
 """
 
@@ -23,15 +22,14 @@ from dotenv import load_dotenv
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+EMBEDDING_MODEL = "models/text-embedding-004"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
 VECTOR_DB_DIR = os.path.join(tempfile.gettempdir(), "pdf_rag_chroma_db")
@@ -62,7 +60,6 @@ def _extract_text(response) -> str:
 
 class PDFChatBot:
     def __init__(self):
-        self.embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
         self.vectordb = None
         self.retriever = None
         self.llm = None
@@ -96,10 +93,15 @@ class PDFChatBot:
             )
             chunks = splitter.split_documents(documents)
 
-            # 3. Embed + store in ChromaDB
+            # 3. Embed + store in ChromaDB (Gemini embeddings — no local model,
+            #    keeps memory usage low on free-tier hosting)
+            embeddings = GoogleGenerativeAIEmbeddings(
+                google_api_key=GOOGLE_API_KEY,
+                model=EMBEDDING_MODEL,
+            )
             self.vectordb = Chroma.from_documents(
                 documents=chunks,
-                embedding=self.embeddings,
+                embedding=embeddings,
                 persist_directory=VECTOR_DB_DIR,
             )
             self.retriever = self.vectordb.as_retriever(search_kwargs={"k": 4})
