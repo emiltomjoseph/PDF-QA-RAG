@@ -29,7 +29,7 @@ load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-EMBEDDING_MODEL = "models/text-embedding-004"
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
 VECTOR_DB_DIR = os.path.join(tempfile.gettempdir(), "pdf_rag_chroma_db")
