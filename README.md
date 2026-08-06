@@ -16,9 +16,9 @@ second one?") resolve correctly without the user having to repeat context.
 |---------------------|--------------------------------------------------|
 | Orchestration       | LangChain                                         |
 | PDF loading         | PyPDFLoader                                       |
-| Embeddings          | Sentence Transformers (`all-MiniLM-L6-v2`, local) |
+| Embeddings          | Google Gemini API (`gemini-embedding-001`, free tier)|
 | Vector store        | ChromaDB                                          |
-| LLM                 | Google Gemini API (free tier, `gemini-1.5-flash`) |
+| LLM                 | Google Gemini API (free tier, `gemini-2.5-flash`) |
 | UI                  | Gradio                                            |
 
 ## Memory Implementation
@@ -66,6 +66,11 @@ To deploy on Hugging Face Spaces:
 4. Space builds automatically and serves `app.py`.
 
 ## Challenges Faced
+- Free-tier hosting (Render's 512MB free instance) ran out of memory loading
+  a local Sentence Transformers model, since it pulls in PyTorch. Switched
+  to Gemini's embedding API (`gemini-embedding-001`) instead of a local model,
+  removing the PyTorch dependency entirely and keeping memory usage low
+  enough for free hosting.
 - LangChain's 1.0 release removed several legacy prebuilt chains/memory
   classes (`ConversationalRetrievalChain`, `ConversationBufferMemory`).
   Rather than pin to an old version, the app implements the
