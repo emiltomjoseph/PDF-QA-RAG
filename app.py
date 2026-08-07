@@ -14,10 +14,9 @@ Stack:
 """
 
 import os
-import shutil
-import tempfile
 
 import gradio as gr
+import chromadb
 from dotenv import load_dotenv
 
 from langchain_community.document_loaders import PyPDFLoader
@@ -28,11 +27,10 @@ from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmb
 load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "gemini-embedding-001")
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 150
-VECTOR_DB_DIR = os.path.join(tempfile.gettempdir(), "pdf_rag_chroma_db")
 
 # ---------------------------------------------------------------------------
 # Core RAG pipeline
@@ -66,12 +64,6 @@ class PDFChatBot:
         self.chat_history = []  # list of (question, answer) tuples
         self.pdf_name = None
 
-    def _fresh_vector_dir(self):
-        # Wipe any previous session's vector store so PDFs don't mix.
-        if os.path.exists(VECTOR_DB_DIR):
-            shutil.rmtree(VECTOR_DB_DIR, ignore_errors=True)
-        os.makedirs(VECTOR_DB_DIR, exist_ok=True)
-
     def load_pdf(self, file_path: str) -> str:
         if not GOOGLE_API_KEY:
             return (
@@ -80,8 +72,6 @@ class PDFChatBot:
             )
 
         try:
-            self._fresh_vector_dir()
-
             # 1. Load
             loader = PyPDFLoader(file_path)
             documents = loader.load()
@@ -94,15 +84,21 @@ class PDFChatBot:
             chunks = splitter.split_documents(documents)
 
             # 3. Embed + store in ChromaDB (Gemini embeddings — no local model,
-            #    keeps memory usage low on free-tier hosting)
+            #    keeps memory usage low on free-tier hosting). Uses an
+            #    explicit ephemeral (in-memory) chromadb client — Chroma's
+            #    implicit default still tries to write a SQLite file to disk,
+            #    which fails on hosts with a read-only filesystem (e.g.
+            #    Render's free tier). The app is session-scoped anyway, so
+            #    persistence isn't needed.
             embeddings = GoogleGenerativeAIEmbeddings(
                 google_api_key=GOOGLE_API_KEY,
                 model=EMBEDDING_MODEL,
             )
+            chroma_client = chromadb.EphemeralClient()
             self.vectordb = Chroma.from_documents(
                 documents=chunks,
                 embedding=embeddings,
-                persist_directory=VECTOR_DB_DIR,
+                client=chroma_client,
             )
             self.retriever = self.vectordb.as_retriever(search_kwargs={"k": 4})
 
@@ -188,8 +184,6 @@ class PDFChatBot:
         self.llm = None
         self.chat_history = []
         self.pdf_name = None
-        if os.path.exists(VECTOR_DB_DIR):
-            shutil.rmtree(VECTOR_DB_DIR, ignore_errors=True)
 
 
 bot = PDFChatBot()
