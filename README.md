@@ -1,6 +1,6 @@
 # 📄 PDF Question Answering App (RAG) — Epochs '26, Day 11
 
-**Participant Name:** Emil
+**Participant Name:** Emil Tom Joseph
 **MUID:** emiltomjoseph@mulearn
 
 ## Project Overview
